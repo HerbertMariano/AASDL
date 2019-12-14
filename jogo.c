@@ -43,14 +43,14 @@ void eventos_teclado(SDL_Event evento,OBJETO *player)
 	}
 }
 
-int teclado_menu(SDL_Event evento,OBJETO *po,int select,int tela)
+int teclado_menu(SDL_Event evento,OBJETO *po,int select)
 {
 	
-	if((evento.type == SDL_KEYUP)&&(evento.key.keysym.sym == SDLK_UP))
+	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_UP))
 	{
 		select--;
 	}
-	if((evento.type == SDL_KEYUP)&&(evento.key.keysym.sym == SDLK_DOWN))
+	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_DOWN))
 	{
 		select++;
 	}
@@ -68,11 +68,11 @@ int teclado_menu(SDL_Event evento,OBJETO *po,int select,int tela)
 
 void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,OBJETO *carro1,OBJETO *carro2,OBJETO *carro3,SDL_Renderer *render)
 {
-	if(fundo1->texdestination.y>768)
+	if(fundo1->texdestination.y>=768)
 	{
 		fundo1->texdestination.y=-765;
 	}
-	if(fundo2->texdestination.y>768)
+	if(fundo2->texdestination.y>=768)
 	{
 		fundo2->texdestination.y=-765;
 	}
@@ -121,8 +121,8 @@ int exibe_ponteiro(int select)
 
 int main(int argc, char *argv[])
 {
-	const int FPS=60;
-	const int frame_delay=1000/FPS;
+	int FPS=10;
+	int frame_delay;
 	Uint32 frame_start;
 	int frame_time;
 	int seletor = 1,tela=0;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	azul.sprite.y=0;
 	azul.sprite.w=504;
 	azul.sprite.h=417;
-	azul.texdestination.x=500;
+	azul.texdestination.x=400;
 	azul.texdestination.y=200;
 	azul.texdestination.w=150;
 	azul.texdestination.h=150;
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 	laranja.sprite.y=0;
 	laranja.sprite.w=504;
 	laranja.sprite.h=417;
-	laranja.texdestination.x=650;
+	laranja.texdestination.x=550;
 	laranja.texdestination.y=600;
 	laranja.texdestination.w=150;
 	laranja.texdestination.h=150;
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 	rosa.sprite.y=0;
 	rosa.sprite.w=504;
 	rosa.sprite.h=417;
-	rosa.texdestination.x=650;
+	rosa.texdestination.x=700;
 	rosa.texdestination.y=600;
 	rosa.texdestination.w=150;
 	rosa.texdestination.h=150;
@@ -255,6 +255,19 @@ int main(int argc, char *argv[])
 	credito.texdestination.w=1366;
 	credito.texdestination.h=768;
 
+	OBJETO recorde;
+	recorde.tmpsurface = IMG_Load("recorde.png");
+	recorde.tmptexture = SDL_CreateTextureFromSurface(renderer,recorde.tmpsurface);
+	SDL_FreeSurface(recorde.tmpsurface);
+	recorde.sprite.x=0;
+	recorde.sprite.y=0;
+	recorde.sprite.w=1366;
+	recorde.sprite.h=768;
+	recorde.texdestination.x=0;
+	recorde.texdestination.y=0;
+	recorde.texdestination.w=1366;
+	recorde.texdestination.h=768;
+
 	OBJETO ponteiro;
 	ponteiro.tmpsurface = IMG_Load("ponteiro.png");
 	ponteiro.tmptexture = SDL_CreateTextureFromSurface(renderer,ponteiro.tmpsurface);
@@ -279,35 +292,72 @@ int main(int argc, char *argv[])
 		{
 			rodando = false;
 		}
-
-		frame_start = SDL_GetTicks();
-		int tela = 0;
+		if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
+		{
+			tela=seletor;
+		}
 
 		if(tela==0)
 		{
-			seletor = teclado_menu(event,&ponteiro,seletor,tela);
+			frame_delay=1000/FPS;
+			frame_start = SDL_GetTicks();
+			seletor = teclado_menu(event,&ponteiro,seletor);
 			ponteiro.texdestination.y = exibe_ponteiro(seletor);
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer,menu.tmptexture,&menu.sprite,&menu.texdestination);
 			SDL_RenderCopy(renderer,ponteiro.tmptexture,&ponteiro.sprite,&ponteiro.texdestination);
 			SDL_RenderPresent(renderer);
+			frame_time = SDL_GetTicks() - frame_start;
 		}
 
 		if(tela==1)
 		{
+			FPS=60;
+			frame_delay=1000/FPS;
+			frame_start = SDL_GetTicks();
 			eventos_teclado(event, &jogador);
 			SDL_RenderClear(renderer);//limpando buffer
 			desenha_pista(&grama,&pista0,&pista1,&azul,&rosa,&laranja,renderer);
 			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
 			SDL_RenderPresent(renderer);//exibindo
+			frame_time = SDL_GetTicks() - frame_start;
 		}
-		frame_time = SDL_GetTicks() - frame_start;
+		if(tela==2)
+		{
+			
+			FPS=10;
+			frame_delay=1000/FPS;
+			frame_start = SDL_GetTicks();
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer,recorde.tmptexture,&recorde.sprite,&recorde.texdestination);
+			SDL_RenderPresent(renderer);
+			frame_time = SDL_GetTicks() - frame_start;
+			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
+			{
+				tela=0;
+			}
+		}
+		if(tela==3)
+		{
+			FPS=10;
+			frame_delay=1000/FPS;
+			frame_start = SDL_GetTicks();
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer,credito.tmptexture,&credito.sprite,&credito.texdestination);
+			SDL_RenderPresent(renderer);
+			frame_time = SDL_GetTicks() - frame_start;
+			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
+			{
+				tela=0;
+			}
+		}
 		if(frame_delay>frame_time)
 		{
 			SDL_Delay(frame_delay-frame_time);
 		}
 
 	}
+	SDL_DestroyTexture(recorde.tmptexture);
 	SDL_DestroyTexture(ponteiro.tmptexture);
 	SDL_DestroyTexture(menu.tmptexture);
 	SDL_DestroyTexture(credito.tmptexture);
