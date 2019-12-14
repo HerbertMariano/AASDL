@@ -1,0 +1,5 @@
+herbie 200
+mario  190
+merhi  150
+filipe 100
+ze     10

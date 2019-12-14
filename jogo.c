@@ -3,6 +3,7 @@
 #include<stdbool.h>
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_image.h>
+#include<SDL2/SDL_ttf.h>
 #include<time.h>
 
 static const int width = 1366;
@@ -115,13 +116,23 @@ int exibe_ponteiro(int select)
 	{
 		return 410;
 	}
-
 }
 
+void colisao(OBJETO *player,OBJETO *inimigo)
+{
+	if((player->texdestination.y<=inimigo->texdestination.y+150)&&
+	(player->texdestination.y>=inimigo->texdestination.y)&&
+	(player->texdestination.x>=inimigo->texdestination.x-150)&&
+	(player->texdestination.x<=inimigo->texdestination.y+300))
+	{
+		inimigo->texdestination.y-=50;
+		player->texdestination.y+=10;
+	}
+}
 
 int main(int argc, char *argv[])
 {
-	int FPS=10;
+	int FPS=60;
 	int frame_delay;
 	Uint32 frame_start;
 	int frame_time;
@@ -134,8 +145,12 @@ int main(int argc, char *argv[])
 	SDL_Renderer *renderer = SDL_CreateRenderer(window , -1 , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	SDL_SetRenderDrawColor(renderer , 255 , 255 , 255 , 255);
 	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
+	TTF_Init();
 	bool rodando = true;
 	SDL_Event event;
+	FILE *pa;
+	char arq[20] = "pontos.txt",vetor[7];
+	int pontos;
 
 	/***************inicializando SDL*********************/
 	OBJETO jogador;
@@ -212,7 +227,7 @@ int main(int argc, char *argv[])
 	laranja.sprite.w=504;
 	laranja.sprite.h=417;
 	laranja.texdestination.x=550;
-	laranja.texdestination.y=600;
+	laranja.texdestination.y=300;
 	laranja.texdestination.w=150;
 	laranja.texdestination.h=150;
 
@@ -225,7 +240,7 @@ int main(int argc, char *argv[])
 	rosa.sprite.w=504;
 	rosa.sprite.h=417;
 	rosa.texdestination.x=700;
-	rosa.texdestination.y=600;
+	rosa.texdestination.y=-100;
 	rosa.texdestination.w=150;
 	rosa.texdestination.h=150;
 
@@ -296,19 +311,23 @@ int main(int argc, char *argv[])
 		{
 			tela=seletor;
 		}
+		frame_start = SDL_GetTicks();
 
 		if(tela==0)
 		{
 			frame_delay=1000/FPS;
-			frame_start = SDL_GetTicks();
 			seletor = teclado_menu(event,&ponteiro,seletor);
 			ponteiro.texdestination.y = exibe_ponteiro(seletor);
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer,menu.tmptexture,&menu.sprite,&menu.texdestination);
 			SDL_RenderCopy(renderer,ponteiro.tmptexture,&ponteiro.sprite,&ponteiro.texdestination);
 			SDL_RenderPresent(renderer);
-			frame_time = SDL_GetTicks() - frame_start;
 		}
+
+		if(jogador.texdestination.y>=768)
+			{
+				tela=4;
+			}
 
 		if(tela==1)
 		{
@@ -321,41 +340,54 @@ int main(int argc, char *argv[])
 			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
 			SDL_RenderPresent(renderer);//exibindo
 			frame_time = SDL_GetTicks() - frame_start;
+			colisao(&jogador,&rosa);
 		}
 		if(tela==2)
 		{
-			
 			FPS=10;
 			frame_delay=1000/FPS;
 			frame_start = SDL_GetTicks();
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer,recorde.tmptexture,&recorde.sprite,&recorde.texdestination);
 			SDL_RenderPresent(renderer);
-			frame_time = SDL_GetTicks() - frame_start;
 			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
 			{
 				tela=0;
 			}
+			fclose(pa);
 		}
 		if(tela==3)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
-			frame_start = SDL_GetTicks();
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer,credito.tmptexture,&credito.sprite,&credito.texdestination);
 			SDL_RenderPresent(renderer);
-			frame_time = SDL_GetTicks() - frame_start;
 			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
+			{
+				tela=0;
+				SDL_Delay(2000);
+				FPS=10;
+			}
+
+		if(tela==4)
+		{
+			FPS=10;
+			frame_delay=1000/FPS;
+			SDL_RenderClear(renderer);
+			
+			SDL_RenderPresent(renderer);
+			if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
 			{
 				tela=0;
 			}
 		}
+		}
+		frame_time = SDL_GetTicks() - frame_start;
 		if(frame_delay>frame_time)
 		{
 			SDL_Delay(frame_delay-frame_time);
 		}
-
 	}
 	SDL_DestroyTexture(recorde.tmptexture);
 	SDL_DestroyTexture(ponteiro.tmptexture);
