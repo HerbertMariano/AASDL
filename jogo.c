@@ -43,7 +43,30 @@ void eventos_teclado(SDL_Event evento,OBJETO *player)
 	}
 }
 
-void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,SDL_Renderer *render)
+int teclado_menu(SDL_Event evento,OBJETO *po,int select,int tela)
+{
+	
+	if((evento.type == SDL_KEYUP)&&(evento.key.keysym.sym == SDLK_UP))
+	{
+		select--;
+	}
+	if((evento.type == SDL_KEYUP)&&(evento.key.keysym.sym == SDLK_DOWN))
+	{
+		select++;
+	}
+	if(select>3)
+	{
+		select=1;
+	}
+	if(select<1)
+	{
+		select=3;
+	}
+
+	return select;
+}
+
+void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,OBJETO *carro1,OBJETO *carro2,OBJETO *carro3,SDL_Renderer *render)
 {
 	if(fundo1->texdestination.y>768)
 	{
@@ -53,22 +76,48 @@ void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,SDL_Renderer *r
 	{
 		fundo2->texdestination.y=-765;
 	}
+	if(carro1->texdestination.y>768)
+	{
+		carro1->texdestination.y=-150;
+	}
+	if(carro2->texdestination.y>768)
+	{
+		carro2->texdestination.y=-150;
+	}
+	if(carro3->texdestination.y>768)
+	{
+		carro3->texdestination.y=-150;
+	}
 	fundo1->texdestination.y+=4;
 	fundo2->texdestination.y+=4;
+	carro1->texdestination.y+=3;
+	carro2->texdestination.y+=3;
+	carro3->texdestination.y+=3;
 	SDL_RenderCopy(render,gramado->tmptexture,&gramado->sprite,&gramado->texdestination);
 	SDL_RenderCopy(render,fundo1->tmptexture,&fundo1->sprite,&fundo1->texdestination);
 	SDL_RenderCopy(render,fundo2->tmptexture,&fundo2->sprite,&fundo2->texdestination);
+	SDL_RenderCopy(render,carro1->tmptexture,&carro1->sprite,&carro1->texdestination);
+	SDL_RenderCopy(render,carro2->tmptexture,&carro2->sprite,&carro2->texdestination);
+	SDL_RenderCopy(render,carro3->tmptexture,&carro3->sprite,&carro3->texdestination);
 }
 
-int colisao(OBJETO *inimigo,OBJETO *player)
+int exibe_ponteiro(int select)
 {
-	if((inimigo->texdestination.x>=player->texdestination.x && inimigo->texdestination.x<=player->texdestination.x+150)
-	|| (inimigo->texdestination.y>=player->texdestination.y && inimigo->texdestination.y<=player->texdestination.y+150))
+	if(select==1)
 	{
-		return 1;
+		return 150;
 	}
-	return 0;
+	if(select==2)
+	{
+		return 280;
+	}
+	if(select==3)
+	{
+		return 410;
+	}
+
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -76,6 +125,7 @@ int main(int argc, char *argv[])
 	const int frame_delay=1000/FPS;
 	Uint32 frame_start;
 	int frame_time;
+	int seletor = 1,tela=0;
 	/***************inicializando SDL*********************/
 
 	SDL_Init(SDL_INIT_VIDEO);
@@ -179,20 +229,44 @@ int main(int argc, char *argv[])
 	rosa.texdestination.w=150;
 	rosa.texdestination.h=150;
 
-	OBJETO verde;
-	verde.tmpsurface = IMG_Load("CarroVerde.png");
-	verde.tmptexture = SDL_CreateTextureFromSurface(renderer,verde.tmpsurface);
-	SDL_FreeSurface(verde.tmpsurface);
-	verde.sprite.x=0;
-	verde.sprite.y=0;
-	verde.sprite.w=504;
-	verde.sprite.h=417;
-	verde.texdestination.x=650;
-	verde.texdestination.y=600;
-	verde.texdestination.w=150;
-	verde.texdestination.h=150;
+	OBJETO menu;
+	menu.tmpsurface = IMG_Load("Menu.png");
+	menu.tmptexture = SDL_CreateTextureFromSurface(renderer,menu.tmpsurface);
+	SDL_FreeSurface(menu.tmpsurface);
+	menu.sprite.x=0;
+	menu.sprite.y=0;
+	menu.sprite.w=1366;
+	menu.sprite.h=768;
+	menu.texdestination.x=0;
+	menu.texdestination.y=0;
+	menu.texdestination.w=1366;
+	menu.texdestination.h=768;
 
-	
+	OBJETO credito;
+	credito.tmpsurface = IMG_Load("credito.png");
+	credito.tmptexture = SDL_CreateTextureFromSurface(renderer,credito.tmpsurface);
+	SDL_FreeSurface(credito.tmpsurface);
+	credito.sprite.x=0;
+	credito.sprite.y=0;
+	credito.sprite.w=1366;
+	credito.sprite.h=768;
+	credito.texdestination.x=0;
+	credito.texdestination.y=0;
+	credito.texdestination.w=1366;
+	credito.texdestination.h=768;
+
+	OBJETO ponteiro;
+	ponteiro.tmpsurface = IMG_Load("ponteiro.png");
+	ponteiro.tmptexture = SDL_CreateTextureFromSurface(renderer,ponteiro.tmpsurface);
+	SDL_FreeSurface(ponteiro.tmpsurface);
+	ponteiro.sprite.x=0;
+	ponteiro.sprite.y=0;
+	ponteiro.sprite.w=721;
+	ponteiro.sprite.h=390;
+	ponteiro.texdestination.x=800;
+	ponteiro.texdestination.y=150;
+	ponteiro.texdestination.w=200;
+	ponteiro.texdestination.h=100;
 
 	while(rodando)
 	{               
@@ -209,42 +283,24 @@ int main(int argc, char *argv[])
 		frame_start = SDL_GetTicks();
 		int tela = 0;
 
-		if(colisao(&azul,&jogador))
+		if(tela==0)
 		{
-			azul.texdestination.y-=10;
+			seletor = teclado_menu(event,&ponteiro,seletor,tela);
+			ponteiro.texdestination.y = exibe_ponteiro(seletor);
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer,menu.tmptexture,&menu.sprite,&menu.texdestination);
+			SDL_RenderCopy(renderer,ponteiro.tmptexture,&ponteiro.sprite,&ponteiro.texdestination);
+			SDL_RenderPresent(renderer);
 		}
 
-		eventos_teclado(event, &jogador);
-		SDL_RenderClear(renderer);//limpando buffer
-		desenha_pista(&grama,&pista0,&pista1,renderer);
-		SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
-
-		rosa.texdestination.y+=3;
-		laranja.texdestination.y+=3;
-		azul.texdestination.y+=3;
-
-		if(rosa.texdestination.y>768)
+		if(tela==1)
 		{
-			rosa.texdestination.y=-150;
+			eventos_teclado(event, &jogador);
+			SDL_RenderClear(renderer);//limpando buffer
+			desenha_pista(&grama,&pista0,&pista1,&azul,&rosa,&laranja,renderer);
+			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
+			SDL_RenderPresent(renderer);//exibindo
 		}
-		if(laranja.texdestination.y>768)
-		{
-			laranja.texdestination.y=-150;
-		}
-		if(azul.texdestination.y>768)
-		{
-			azul.texdestination.y=-150;
-		}
-
-		for(int i =0;i<3;i++)
-		{
-			SDL_RenderCopy(renderer,verde.tmptexture,&verde.sprite,&verde.texdestination);
-			SDL_RenderCopy(renderer,rosa.tmptexture,&rosa.sprite,&rosa.texdestination);
-			SDL_RenderCopy(renderer,laranja.tmptexture,&laranja.sprite,&laranja.texdestination);
-			SDL_RenderCopy(renderer,azul.tmptexture,&azul.sprite,&azul.texdestination);
-		}
-		SDL_RenderPresent(renderer);//exibindo
-
 		frame_time = SDL_GetTicks() - frame_start;
 		if(frame_delay>frame_time)
 		{
@@ -252,11 +308,13 @@ int main(int argc, char *argv[])
 		}
 
 	}
+	SDL_DestroyTexture(ponteiro.tmptexture);
+	SDL_DestroyTexture(menu.tmptexture);
+	SDL_DestroyTexture(credito.tmptexture);
 	SDL_DestroyTexture(azul.tmptexture);
 	SDL_DestroyTexture(laranja.tmptexture);
 	SDL_DestroyTexture(rosa.tmptexture);
 	SDL_DestroyTexture(grama.tmptexture);
-	SDL_DestroyTexture(verde.tmptexture);
 	SDL_DestroyTexture(pista1.tmptexture);
 	SDL_DestroyTexture(pista0.tmptexture);
 	SDL_DestroyTexture(jogador.tmptexture);
