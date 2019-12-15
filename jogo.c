@@ -34,7 +34,6 @@ void eventos_teclado(SDL_Event evento,OBJETO *player)
 
 	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_RIGHT))
 	{
-		player->sprite.x=504;
 		player->texdestination.x+=3;
 		if(player->texdestination.x>820)
 		{
@@ -120,12 +119,21 @@ int exibe_ponteiro(int select)
 
 void colisao(OBJETO *player,OBJETO *inimigo)
 {
-	if((player->texdestination.y<inimigo->texdestination.y+150)&&
-	(player->texdestination.x>inimigo->texdestination.x-50)&&
-	(player->texdestination.x<inimigo->texdestination.x+150))
+	if((player->texdestination.y<=inimigo->texdestination.y+150)&&
+	(player->texdestination.y>=inimigo->texdestination.y)&&
+	(player->texdestination.x>=inimigo->texdestination.x-150)&&
+	(player->texdestination.x<=inimigo->texdestination.y+300))
 	{
 		inimigo->texdestination.y-=50;
-		player->texdestination.y+=30;
+		player->texdestination.y+=10;
+	}
+
+	if((player->texdestination.x>=inimigo->texdestination.x)&&
+	(player->texdestination.x<=inimigo->texdestination.x+150)&&
+	(player->texdestination.y>=inimigo->texdestination.y-150)&&
+	(player->texdestination.y<=inimigo->sprite.y+300))
+	{
+		player->texdestination.x=inimigo->texdestination.x+2;
 	}
 }
 
@@ -144,7 +152,6 @@ int main(int argc, char *argv[])
 	SDL_Renderer *renderer = SDL_CreateRenderer(window , -1 , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	SDL_SetRenderDrawColor(renderer , 255 , 255 , 255 , 255);
 	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
-	TTF_Init();
 	bool rodando = true;
 	SDL_Event event;
 	FILE *pa;
@@ -341,16 +348,22 @@ int main(int argc, char *argv[])
 		}
 		if(tela==1)
 		{
+			distancia+=4;
+			if(distancia>=10)
+			{
+				pontos++;
+				distancia=0;
+			}
 			FPS=60;
 			frame_delay=1000/FPS;
 			frame_start = SDL_GetTicks();
 			eventos_teclado(event, &jogador);
-			colisao(&jogador,&rosa);
 			SDL_RenderClear(renderer);//limpando buffer
 			desenha_pista(&grama,&pista0,&pista1,&azul,&rosa,&laranja,renderer);
 			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
 			SDL_RenderPresent(renderer);//exibindo
 			frame_time = SDL_GetTicks() - frame_start;
+			colisao(&jogador,&rosa);
 			SDL_RenderClear(renderer);
 		}
 		if(tela==2)
