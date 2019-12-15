@@ -120,13 +120,12 @@ int exibe_ponteiro(int select)
 
 void colisao(OBJETO *player,OBJETO *inimigo)
 {
-	if((player->texdestination.y<=inimigo->texdestination.y+150)&&
-	(player->texdestination.y>=inimigo->texdestination.y)&&
-	(player->texdestination.x>=inimigo->texdestination.x-150)&&
-	(player->texdestination.x<=inimigo->texdestination.y+300))
+	if((player->texdestination.y<inimigo->texdestination.y+150)&&
+	(player->texdestination.x>inimigo->texdestination.x-50)&&
+	(player->texdestination.x<inimigo->texdestination.x+150))
 	{
 		inimigo->texdestination.y-=50;
-		player->texdestination.y+=10;
+		player->texdestination.y+=30;
 	}
 }
 
@@ -136,7 +135,7 @@ int main(int argc, char *argv[])
 	int frame_delay;
 	Uint32 frame_start;
 	int frame_time;
-	int seletor = 1,tela=0;
+	int seletor = 1,tela=0, pontos=0,distancia=0;
 	/***************inicializando SDL*********************/
 
 	SDL_Init(SDL_INIT_VIDEO);
@@ -150,7 +149,6 @@ int main(int argc, char *argv[])
 	SDL_Event event;
 	FILE *pa;
 	char arq[20] = "pontos.txt",vetor[7];
-	int pontos;
 
 	/***************inicializando SDL*********************/
 	OBJETO jogador;
@@ -296,6 +294,20 @@ int main(int argc, char *argv[])
 	ponteiro.texdestination.w=200;
 	ponteiro.texdestination.h=100;
 
+	OBJETO fim;
+	fim.tmpsurface = IMG_Load("GameOver.png");
+	fim.tmptexture = SDL_CreateTextureFromSurface(renderer,fim.tmpsurface);
+	SDL_FreeSurface(fim.tmpsurface);
+	fim.sprite.x=0;
+	fim.sprite.y=0;
+	fim.sprite.w=1366;
+	fim.sprite.h=768;
+	fim.texdestination.x=0;
+	fim.texdestination.y=0;
+	fim.texdestination.w=1366;
+	fim.texdestination.h=768;
+
+
 	while(rodando)
 	{               
 		while(SDL_PollEvent(&event))
@@ -307,14 +319,14 @@ int main(int argc, char *argv[])
 		{
 			rodando = false;
 		}
-		if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
+		if(jogador.texdestination.y>=768)
 		{
-			tela=seletor;
+			tela=4;
 		}
 		frame_start = SDL_GetTicks();
-
 		if(tela==0)
 		{
+			FPS=10;
 			frame_delay=1000/FPS;
 			seletor = teclado_menu(event,&ponteiro,seletor);
 			ponteiro.texdestination.y = exibe_ponteiro(seletor);
@@ -322,25 +334,24 @@ int main(int argc, char *argv[])
 			SDL_RenderCopy(renderer,menu.tmptexture,&menu.sprite,&menu.texdestination);
 			SDL_RenderCopy(renderer,ponteiro.tmptexture,&ponteiro.sprite,&ponteiro.texdestination);
 			SDL_RenderPresent(renderer);
-		}
-
-		if(jogador.texdestination.y>=768)
+			if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
 			{
-				tela=4;
+				tela=seletor;
 			}
-
+		}
 		if(tela==1)
 		{
 			FPS=60;
 			frame_delay=1000/FPS;
 			frame_start = SDL_GetTicks();
 			eventos_teclado(event, &jogador);
+			colisao(&jogador,&rosa);
 			SDL_RenderClear(renderer);//limpando buffer
 			desenha_pista(&grama,&pista0,&pista1,&azul,&rosa,&laranja,renderer);
 			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
 			SDL_RenderPresent(renderer);//exibindo
 			frame_time = SDL_GetTicks() - frame_start;
-			colisao(&jogador,&rosa);
+			SDL_RenderClear(renderer);
 		}
 		if(tela==2)
 		{
@@ -354,7 +365,6 @@ int main(int argc, char *argv[])
 			{
 				tela=0;
 			}
-			fclose(pa);
 		}
 		if(tela==3)
 		{
@@ -366,22 +376,21 @@ int main(int argc, char *argv[])
 			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
 			{
 				tela=0;
-				SDL_Delay(2000);
-				FPS=10;
 			}
-
+		}
 		if(tela==4)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
 			SDL_RenderClear(renderer);
-			
+			SDL_RenderCopy(renderer,fim.tmptexture,&fim.sprite,&fim.texdestination);
 			SDL_RenderPresent(renderer);
 			if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
 			{
+				jogador.texdestination.y=600;
 				tela=0;
+				SDL_Delay(1000);
 			}
-		}
 		}
 		frame_time = SDL_GetTicks() - frame_start;
 		if(frame_delay>frame_time)
@@ -389,6 +398,7 @@ int main(int argc, char *argv[])
 			SDL_Delay(frame_delay-frame_time);
 		}
 	}
+	SDL_DestroyTexture(fim.tmptexture);
 	SDL_DestroyTexture(recorde.tmptexture);
 	SDL_DestroyTexture(ponteiro.tmptexture);
 	SDL_DestroyTexture(menu.tmptexture);
@@ -402,6 +412,7 @@ int main(int argc, char *argv[])
 	SDL_DestroyTexture(jogador.tmptexture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
+	IMG_Quit();
 	SDL_Quit(); 
 	return 0;
 }
