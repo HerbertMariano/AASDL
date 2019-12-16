@@ -1,30 +1,43 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdbool.h>
-#include<SDL2/SDL.h>
-#include<SDL2/SDL_image.h>
-#include<SDL2/SDL_ttf.h>
+#include</usr/include/SDL2/SDL.h>
+#include</usr/include/SDL2/SDL_image.h>
+#include "jogo.h"
 #include<time.h>
+
+#define QTD_CARROS 			4
+#define QTD_PISTAS			4
+#define altura_colisao 		130
+#define largura_colisao 	60
+#define COR_CARRO_ROSA  	0
+#define COR_CARRO_AZUL		1
+#define COR_CARRO_VERDE	  	2
+#define COR_CARRO_LARANJA 	3
+#define PISTA1 				400
+#define PISTA2				550
+#define PISTA3				700
+#define PISTA4				850
+#define TELA_MENU 			0
+#define TELA_JOGO 			1
+#define TELA_RECORDE 		2
+#define TELA_CREDITOS		3
+#define TELA_GAMEOVER 		4
+#define DIV_ALTURA_PISTA    3
+#define ALTURA1 			0
+#define ALTURA2 			200
+#define ALTURA3  			400
 
 static const int width = 1366;
 static const int height = 768;
 
-typedef struct OBJETO
-{
-	SDL_Rect sprite;
-	SDL_Rect texdestination;
-	SDL_Surface *tmpsurface;
-	SDL_Texture *tmptexture;
-
-}OBJETO;
-
-void eventos_teclado(SDL_Event evento,OBJETO *player)
+void eventos_teclado(SDL_Event evento,OBJETO *player, int velocidade)
 {
 	player->sprite.x=0;
 	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_LEFT))
 	{
 		player->sprite.x=1008;
-		player->texdestination.x-=3;
+		player->texdestination.x-=velocidade;
 		if(player->texdestination.x<400)
 		{
 			player->texdestination.x=400;
@@ -34,7 +47,8 @@ void eventos_teclado(SDL_Event evento,OBJETO *player)
 
 	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_RIGHT))
 	{
-		player->texdestination.x+=3;
+		player->sprite.x=504;
+		player->texdestination.x+=velocidade;
 		if(player->texdestination.x>820)
 		{
 			player->texdestination.x=820;
@@ -43,111 +57,208 @@ void eventos_teclado(SDL_Event evento,OBJETO *player)
 	}
 }
 
-int teclado_menu(SDL_Event evento,OBJETO *po,int select)
+void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,SDL_Renderer *render)
 {
-	
-	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_UP))
-	{
-		select--;
-	}
-	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_DOWN))
-	{
-		select++;
-	}
-	if(select>3)
-	{
-		select=1;
-	}
-	if(select<1)
-	{
-		select=3;
-	}
-
-	return select;
-}
-
-void desenha_pista(OBJETO *gramado,OBJETO *fundo1,OBJETO *fundo2,OBJETO *carro1,OBJETO *carro2,OBJETO *carro3,SDL_Renderer *render)
-{
-	if(fundo1->texdestination.y>=768)
+	if(fundo1->texdestination.y>768)
 	{
 		fundo1->texdestination.y=-765;
 	}
-	if(fundo2->texdestination.y>=768)
+	if(fundo2->texdestination.y>768)
 	{
 		fundo2->texdestination.y=-765;
 	}
-	if(carro1->texdestination.y>768)
-	{
-		carro1->texdestination.y=-150;
-	}
-	if(carro2->texdestination.y>768)
-	{
-		carro2->texdestination.y=-150;
-	}
-	if(carro3->texdestination.y>768)
-	{
-		carro3->texdestination.y=-150;
-	}
 	fundo1->texdestination.y+=4;
 	fundo2->texdestination.y+=4;
-	carro1->texdestination.y+=3;
-	carro2->texdestination.y+=3;
-	carro3->texdestination.y+=3;
 	SDL_RenderCopy(render,gramado->tmptexture,&gramado->sprite,&gramado->texdestination);
 	SDL_RenderCopy(render,fundo1->tmptexture,&fundo1->sprite,&fundo1->texdestination);
 	SDL_RenderCopy(render,fundo2->tmptexture,&fundo2->sprite,&fundo2->texdestination);
-	SDL_RenderCopy(render,carro1->tmptexture,&carro1->sprite,&carro1->texdestination);
-	SDL_RenderCopy(render,carro2->tmptexture,&carro2->sprite,&carro2->texdestination);
-	SDL_RenderCopy(render,carro3->tmptexture,&carro3->sprite,&carro3->texdestination);
+}
+int posicaoAleatoriaAlturaPista(void)
+{
+	int posicao;
+	posicao = rand() % DIV_ALTURA_PISTA;
+
+	switch(posicao)
+	{
+		case 0:
+			return ALTURA1;
+		case 1:
+			return ALTURA2;
+		case 2:
+			return ALTURA3;
+	}
+}
+
+int posicaoAleatoriaPista(void)
+{
+	int posicao;
+	
+	posicao = rand() % QTD_PISTAS;
+
+	switch(posicao)
+	{
+		case 0:
+			return PISTA1;
+		case 1:
+			return PISTA2;
+		case 2:
+			return PISTA3;
+		case 3:
+			return PISTA4;
+	}
+}
+
+int randCor(void)
+{
+	int cor;
+	cor = rand() % QTD_CARROS;
+	
+	return cor;
+}
+
+void initObjeto(OBJETO *objeto,int sX,int sY,int sW,int sH,int tX,int tY,int tW, int tH,char *file_img,SDL_Renderer *renderer)
+{
+	objeto->tmpsurface = IMG_Load(file_img);
+	objeto->tmptexture = SDL_CreateTextureFromSurface(renderer,objeto->tmpsurface);
+	SDL_FreeSurface(objeto->tmpsurface);
+	objeto->sprite.x=sX;
+	objeto->sprite.y=sY;
+	objeto->sprite.w=sW;
+	objeto->sprite.h=sH;
+	objeto->texdestination.x=tX;
+	objeto->texdestination.y=tY;
+	objeto->texdestination.w=tW;
+	objeto->texdestination.h=tH;
+}
+void initCenario(OBJETO *pista0, OBJETO *pista1, OBJETO *grama, SDL_Renderer *renderer)
+{
+	initObjeto(pista0,0,0,840 ,650,263,-765,840 ,768,"pista.png",renderer);
+	initObjeto(pista1,0,0,840 ,650,263,0   ,840 ,768,"pista.png",renderer);
+	initObjeto(grama, 0,0,1366,768,0  ,0   ,1366,768,"grama.png",renderer);
+}
+
+OBJETO getCarroJogador(SDL_Renderer *renderer)
+{
+	OBJETO jogador;
+	initObjeto(&jogador,0,0,504,417,650,600,150,150,"carro.png",renderer);
+	return jogador;
+}
+
+OBJETO getCarroAleatorio(SDL_Renderer *renderer)
+{
+	OBJETO carro;
+	int  cor 	     = randCor();
+	char *corCarro   = getImageCarro(cor);
+	initObjeto(&carro,0,0,504,417,posicaoAleatoriaPista(),posicaoAleatoriaAlturaPista(),150,150,corCarro,renderer);
+	return carro;
+}
+
+char* getImageCarro(int cor)
+{
+	switch(cor)
+	{
+		case COR_CARRO_VERDE:
+			return "CarroVerde.png";
+		case COR_CARRO_LARANJA:
+			return "CarroLaranja.png";
+		case COR_CARRO_ROSA:
+			return "CarroRosa.png";
+		case COR_CARRO_AZUL:
+			return "CarroAzul.png";
+	}
+}
+
+int colisao(OBJETO *inimigo,OBJETO *player)
+{
+	if((inimigo->texdestination.x <= player->texdestination.x && inimigo->texdestination.x + largura_colisao >= player->texdestination.x)
+	&& (inimigo->texdestination.y <= player->texdestination.y && inimigo->texdestination.y + altura_colisao  >= player->texdestination.y))
+	{
+		return 1;
+	}
+	if((inimigo->texdestination.x - largura_colisao <= player->texdestination.x && inimigo->texdestination.x >= player->texdestination.x)
+	&& (inimigo->texdestination.y <= player->texdestination.y && inimigo->texdestination.y + altura_colisao  >= player->texdestination.y))
+	{
+		return 1;
+	}
+	return 0;
+}
+
+OBJETO newMenu(SDL_Renderer *renderer)
+{
+	OBJETO menu;
+	initObjeto(&menu,0,0,1366,768,0,0,1366,768,"Menu.png",renderer);
+	return menu;
+}
+
+OBJETO newCredito(SDL_Renderer *renderer)
+{
+	OBJETO credito;
+	initObjeto(&credito,0,0,1366,768,0,0,1366,768,"credito.png",renderer);
+	return credito;
+}
+
+OBJETO newRecorde(SDL_Renderer *renderer)
+{
+	OBJETO recorde;
+	initObjeto(&recorde,0,0,1366,768,0,0,1366,768,"recorde.png",renderer);
+	return recorde;
+}
+
+OBJETO newPonteiro(SDL_Renderer *renderer)
+{
+	OBJETO ponteiro;
+	initObjeto(&ponteiro,0,0,721,390,800,150,200,100,"ponteiro.png",renderer);
+	return ponteiro;
+}
+
+OBJETO newGameOver(SDL_Renderer *renderer)
+{
+	OBJETO fim;
+	initObjeto(&fim,0,0,1366,768,0,0,1366,768,"GameOver.png",renderer);
+	return fim;
 }
 
 int exibe_ponteiro(int select)
 {
-	if(select==1)
+	switch(select)
 	{
-		return 150;
-	}
-	if(select==2)
-	{
-		return 280;
-	}
-	if(select==3)
-	{
-		return 410;
+		case 1:
+			return 150;
+		case 2:
+			return 280;
+		case 3:
+			return 410;
 	}
 }
 
-void colisao(OBJETO *player,OBJETO *inimigo)
+int teclado_menu(SDL_Event evento,OBJETO *po,int select)
 {
-	if((player->texdestination.y<=inimigo->texdestination.y+150)&&
-	(player->texdestination.y>=inimigo->texdestination.y)&&
-	(player->texdestination.x>=inimigo->texdestination.x-150)&&
-	(player->texdestination.x<=inimigo->texdestination.y+300))
-	{
-		inimigo->texdestination.y-=50;
-		player->texdestination.y+=10;
-	}
+	
+	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_UP))   select--;
+	if((evento.type == SDL_KEYDOWN)&&(evento.key.keysym.sym == SDLK_DOWN)) select++;
+	if(select > 3) select=1;
+	if(select < 1) select=3;
 
-	if((player->texdestination.x>=inimigo->texdestination.x)&&
-	(player->texdestination.x<=inimigo->texdestination.x+150)&&
-	(player->texdestination.y>=inimigo->texdestination.y-150)&&
-	(player->texdestination.y<=inimigo->sprite.y+300))
-	{
-		player->texdestination.x=inimigo->texdestination.x+2;
-	}
+	return select;
 }
 
 int main(int argc, char *argv[])
 {
 	int FPS=60;
-	int frame_delay;
+	int frame_delay=1000/FPS;
 	Uint32 frame_start;
 	int frame_time;
-	int seletor = 1,tela=0, pontos=0,distancia=0;
+	OBJETO carros[QTD_CARROS];
+	OBJETO pista0,pista1,grama;
+	int velocidade = 3;
+	int vidas	   = 2;
+	int seletor = 1, tela = 0, pontos = 0, distancia = 0;
+	srand(time(NULL));
+
 	/***************inicializando SDL*********************/
 
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window *window = SDL_CreateWindow("jogo",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width,height,SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_Window  *window = SDL_CreateWindow("jogo",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width,height,SDL_WINDOW_FULLSCREEN);
 	SDL_Surface *windowSurface = NULL;
 	SDL_Renderer *renderer = SDL_CreateRenderer(window , -1 , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	SDL_SetRenderDrawColor(renderer , 255 , 255 , 255 , 255);
@@ -158,180 +269,35 @@ int main(int argc, char *argv[])
 	char arq[20] = "pontos.txt",vetor[7];
 
 	/***************inicializando SDL*********************/
-	OBJETO jogador;
-	jogador.tmpsurface = IMG_Load("carro.png");
-	jogador.tmptexture = SDL_CreateTextureFromSurface(renderer,jogador.tmpsurface);
-	SDL_FreeSurface(jogador.tmpsurface);
-	jogador.sprite.x=0;
-	jogador.sprite.y=0;
-	jogador.sprite.w=504;
-	jogador.sprite.h=417;
-	jogador.texdestination.x=650;
-	jogador.texdestination.y=600;
-	jogador.texdestination.w=150;
-	jogador.texdestination.h=150;
+	initCenario(&pista0,&pista1,&grama,renderer);
+	OBJETO jogador  = getCarroJogador(renderer);
+	OBJETO menu 	= newMenu(renderer);
+	OBJETO credito	= newCredito(renderer);
+	OBJETO recorde  = newRecorde(renderer);
+	OBJETO ponteiro = newPonteiro(renderer);
+	OBJETO fim 		= newGameOver(renderer);
 
-	OBJETO pista0;
-	pista0.tmpsurface = IMG_Load("pista.png");
-	pista0.tmptexture = SDL_CreateTextureFromSurface(renderer,pista0.tmpsurface);
-	SDL_FreeSurface(pista0.tmpsurface);
-	pista0.sprite.x=0;
-	pista0.sprite.y=0;
-	pista0.sprite.w=840;
-	pista0.sprite.h=650;
-	pista0.texdestination.x=263;
-	pista0.texdestination.y=-765;
-	pista0.texdestination.w=840;
-	pista0.texdestination.h=768;
-
-	OBJETO pista1;
-	pista1.tmpsurface = IMG_Load("pista.png");
-	pista1.tmptexture = SDL_CreateTextureFromSurface(renderer,pista1.tmpsurface);
-	SDL_FreeSurface(pista1.tmpsurface);
-	pista1.sprite.x=0;
-	pista1.sprite.y=0;
-	pista1.sprite.w=840;
-	pista1.sprite.h=650;
-	pista1.texdestination.x=263;
-	pista1.texdestination.y=0;
-	pista1.texdestination.w=840;
-	pista1.texdestination.h=768;
-
-	OBJETO grama;
-	grama.tmpsurface = IMG_Load("grama.png");
-	grama.tmptexture = SDL_CreateTextureFromSurface(renderer,grama.tmpsurface);
-	SDL_FreeSurface(grama.tmpsurface);
-	grama.sprite.x=0;
-	grama.sprite.y=0;
-	grama.sprite.w=1366;
-	grama.sprite.h=768;
-	grama.texdestination.x=0;
-	grama.texdestination.y=0;
-	grama.texdestination.w=1366;
-	grama.texdestination.h=768;
-
-	OBJETO azul;
-	azul.tmpsurface = IMG_Load("CarroAzul.png");
-	azul.tmptexture = SDL_CreateTextureFromSurface(renderer,azul.tmpsurface);
-	SDL_FreeSurface(azul.tmpsurface);
-	azul.sprite.x=0;
-	azul.sprite.y=0;
-	azul.sprite.w=504;
-	azul.sprite.h=417;
-	azul.texdestination.x=400;
-	azul.texdestination.y=200;
-	azul.texdestination.w=150;
-	azul.texdestination.h=150;
-
-	OBJETO laranja;
-	laranja.tmpsurface = IMG_Load("CarroLaranja.png");
-	laranja.tmptexture = SDL_CreateTextureFromSurface(renderer,laranja.tmpsurface);
-	SDL_FreeSurface(laranja.tmpsurface);
-	laranja.sprite.x=0;
-	laranja.sprite.y=0;
-	laranja.sprite.w=504;
-	laranja.sprite.h=417;
-	laranja.texdestination.x=550;
-	laranja.texdestination.y=300;
-	laranja.texdestination.w=150;
-	laranja.texdestination.h=150;
-
-	OBJETO rosa;
-	rosa.tmpsurface = IMG_Load("CarroRosa.png");
-	rosa.tmptexture = SDL_CreateTextureFromSurface(renderer,rosa.tmpsurface);
-	SDL_FreeSurface(rosa.tmpsurface);
-	rosa.sprite.x=0;
-	rosa.sprite.y=0;
-	rosa.sprite.w=504;
-	rosa.sprite.h=417;
-	rosa.texdestination.x=700;
-	rosa.texdestination.y=-100;
-	rosa.texdestination.w=150;
-	rosa.texdestination.h=150;
-
-	OBJETO menu;
-	menu.tmpsurface = IMG_Load("Menu.png");
-	menu.tmptexture = SDL_CreateTextureFromSurface(renderer,menu.tmpsurface);
-	SDL_FreeSurface(menu.tmpsurface);
-	menu.sprite.x=0;
-	menu.sprite.y=0;
-	menu.sprite.w=1366;
-	menu.sprite.h=768;
-	menu.texdestination.x=0;
-	menu.texdestination.y=0;
-	menu.texdestination.w=1366;
-	menu.texdestination.h=768;
-
-	OBJETO credito;
-	credito.tmpsurface = IMG_Load("credito.png");
-	credito.tmptexture = SDL_CreateTextureFromSurface(renderer,credito.tmpsurface);
-	SDL_FreeSurface(credito.tmpsurface);
-	credito.sprite.x=0;
-	credito.sprite.y=0;
-	credito.sprite.w=1366;
-	credito.sprite.h=768;
-	credito.texdestination.x=0;
-	credito.texdestination.y=0;
-	credito.texdestination.w=1366;
-	credito.texdestination.h=768;
-
-	OBJETO recorde;
-	recorde.tmpsurface = IMG_Load("recorde.png");
-	recorde.tmptexture = SDL_CreateTextureFromSurface(renderer,recorde.tmpsurface);
-	SDL_FreeSurface(recorde.tmpsurface);
-	recorde.sprite.x=0;
-	recorde.sprite.y=0;
-	recorde.sprite.w=1366;
-	recorde.sprite.h=768;
-	recorde.texdestination.x=0;
-	recorde.texdestination.y=0;
-	recorde.texdestination.w=1366;
-	recorde.texdestination.h=768;
-
-	OBJETO ponteiro;
-	ponteiro.tmpsurface = IMG_Load("ponteiro.png");
-	ponteiro.tmptexture = SDL_CreateTextureFromSurface(renderer,ponteiro.tmpsurface);
-	SDL_FreeSurface(ponteiro.tmpsurface);
-	ponteiro.sprite.x=0;
-	ponteiro.sprite.y=0;
-	ponteiro.sprite.w=721;
-	ponteiro.sprite.h=390;
-	ponteiro.texdestination.x=800;
-	ponteiro.texdestination.y=150;
-	ponteiro.texdestination.w=200;
-	ponteiro.texdestination.h=100;
-
-	OBJETO fim;
-	fim.tmpsurface = IMG_Load("GameOver.png");
-	fim.tmptexture = SDL_CreateTextureFromSurface(renderer,fim.tmpsurface);
-	SDL_FreeSurface(fim.tmpsurface);
-	fim.sprite.x=0;
-	fim.sprite.y=0;
-	fim.sprite.w=1366;
-	fim.sprite.h=768;
-	fim.texdestination.x=0;
-	fim.texdestination.y=0;
-	fim.texdestination.w=1366;
-	fim.texdestination.h=768;
-
+	for (int i = 0; i < QTD_CARROS; i++)
+	{
+		carros[i] = getCarroAleatorio(renderer);
+	}
 
 	while(rodando)
 	{               
+		srand(time(NULL));
+
 		while(SDL_PollEvent(&event))
 		{
 			if(event.type == SDL_QUIT)
 				rodando = false;
 		}
-		if((event.type == SDL_KEYUP)&&(event.key.keysym.sym == SDLK_ESCAPE))
-		{
-			rodando = false;
-		}
-		if(jogador.texdestination.y>=768)
-		{
-			tela=4;
-		}
+		if((event.type == SDL_KEYUP)&&(event.key.keysym.sym == SDLK_ESCAPE)) rodando = false;
+
+		if(jogador.texdestination.y>=768) tela = TELA_GAMEOVER;
+
 		frame_start = SDL_GetTicks();
-		if(tela==0)
+
+		if(tela == TELA_MENU)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
@@ -343,30 +309,74 @@ int main(int argc, char *argv[])
 			SDL_RenderPresent(renderer);
 			if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
 			{
-				tela=seletor;
+				tela = seletor;
 			}
 		}
-		if(tela==1)
+		else if(tela == TELA_JOGO)
 		{
-			distancia+=4;
-			if(distancia>=10)
+			distancia += 4;
+			if(distancia % 12 == 0)
 			{
 				pontos++;
-				distancia=0;
+				if(pontos % 200 == 0) velocidade++;
+				if(velocidade == 5) velocidade = 6;
 			}
+
 			FPS=60;
 			frame_delay=1000/FPS;
 			frame_start = SDL_GetTicks();
-			eventos_teclado(event, &jogador);
+
+			for (int i = 0; i < QTD_CARROS; i++)
+			{
+				if(colisao(&carros[i],&jogador)){
+					carros[i] = getCarroAleatorio(renderer);
+					carros[i].texdestination.y = -150;
+					vidas -= 1;
+					if (!vidas){
+						tela = 4;
+					}
+				}
+				else{
+					carros[i].texdestination.y += velocidade;
+				}
+			}
+
+			for (int i = 0; i < QTD_CARROS; i++)
+			{
+				if(carros[i].texdestination.y > height){
+					carros[i] = getCarroAleatorio(renderer);
+					carros[i].texdestination.y = -150;
+				}
+			}
+
+			for (int i = 0; i < QTD_CARROS; i++)
+			{
+				for (int j = 0; j < QTD_CARROS; j++)
+				{
+					if(colisao(&carros[i],&carros[j]) && i != j){
+						carros[i].texdestination.y = posicaoAleatoriaAlturaPista();
+						carros[i].texdestination.x = posicaoAleatoriaPista();
+						i = 0;
+						j = 0;
+					}
+				}
+			}
+
+			eventos_teclado(event, &jogador,velocidade);
 			SDL_RenderClear(renderer);//limpando buffer
-			desenha_pista(&grama,&pista0,&pista1,&azul,&rosa,&laranja,renderer);
+			desenha_pista(&grama,&pista0,&pista1,renderer);
 			SDL_RenderCopy(renderer,jogador.tmptexture,&jogador.sprite,&jogador.texdestination);
+
+			for(int i = 0; i < QTD_CARROS; i++)
+			{
+				SDL_RenderCopy(renderer,carros[i].tmptexture,&carros[i].sprite,&carros[i].texdestination);
+			}
+
 			SDL_RenderPresent(renderer);//exibindo
 			frame_time = SDL_GetTicks() - frame_start;
-			colisao(&jogador,&rosa);
 			SDL_RenderClear(renderer);
 		}
-		if(tela==2)
+		else if(tela == TELA_RECORDE)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
@@ -376,10 +386,10 @@ int main(int argc, char *argv[])
 			SDL_RenderPresent(renderer);
 			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
 			{
-				tela=0;
+				tela = TELA_MENU;
 			}
 		}
-		if(tela==3)
+		else if(tela == TELA_CREDITOS)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
@@ -388,10 +398,10 @@ int main(int argc, char *argv[])
 			SDL_RenderPresent(renderer);
 			if((event.type == SDL_KEYUP)&&(event.key.keysym.scancode == SDL_SCANCODE_TAB))
 			{
-				tela=0;
+				tela = TELA_MENU;
 			}
 		}
-		if(tela==4)
+		else if(tela == TELA_GAMEOVER)
 		{
 			FPS=10;
 			frame_delay=1000/FPS;
@@ -401,31 +411,36 @@ int main(int argc, char *argv[])
 			if((event.type == SDL_KEYDOWN)&&(event.key.keysym.scancode == SDL_SCANCODE_RETURN))
 			{
 				jogador.texdestination.y=600;
-				tela=0;
-				SDL_Delay(1000);
+				tela = TELA_MENU;
+				SDL_Delay(500);
 			}
 		}
+
 		frame_time = SDL_GetTicks() - frame_start;
-		if(frame_delay>frame_time)
+
+		if(frame_delay > frame_time)
 		{
-			SDL_Delay(frame_delay-frame_time);
+			SDL_Delay(frame_delay - frame_time);
 		}
+
 	}
+
+	for (int i = 0; i < QTD_CARROS; i++)
+	{
+		SDL_DestroyTexture(carros[i].tmptexture);
+	}
+
 	SDL_DestroyTexture(fim.tmptexture);
 	SDL_DestroyTexture(recorde.tmptexture);
 	SDL_DestroyTexture(ponteiro.tmptexture);
 	SDL_DestroyTexture(menu.tmptexture);
 	SDL_DestroyTexture(credito.tmptexture);
-	SDL_DestroyTexture(azul.tmptexture);
-	SDL_DestroyTexture(laranja.tmptexture);
-	SDL_DestroyTexture(rosa.tmptexture);
 	SDL_DestroyTexture(grama.tmptexture);
 	SDL_DestroyTexture(pista1.tmptexture);
 	SDL_DestroyTexture(pista0.tmptexture);
 	SDL_DestroyTexture(jogador.tmptexture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
-	IMG_Quit();
 	SDL_Quit(); 
 	return 0;
 }
